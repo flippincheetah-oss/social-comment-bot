@@ -7,7 +7,9 @@ The examples use a made-up company, **Sunshine Tours**. All prices, phone number
 ## What it does
 
 - **Keyword comments** (for example someone comments `tour`): the bot posts a short public reply ("Check your DMs! 🌴") and sends one private DM with your full info and prices. No AI needed, so it is instant and always says exactly what you wrote.
-- **Everything else**: Claude reads the message and answers using **only** the facts you wrote in `facts.md`. If it is not sure, or the message is a complaint, refund, custom quote or anything hostile, it does **not** reply. It sends you an alert instead.
+- **Other comments** (not a keyword) are never answered, so the bot stays quiet on normal chatter.
+- **Missed-comment safety net**: Meta sometimes never sends the webhook for a comment. Every minute the bot checks the newest comments on your Page's recent posts and Reels and answers any keyword comment it missed (only comments under 45 minutes old, and never one your Page already replied to). Set `POLL_COMMENTS=false` to turn it off.
+- **Direct messages**: Claude reads the message and answers using **only** the facts you wrote in `facts.md`. If it is not sure, or the message is a complaint, refund, custom quote or anything hostile, it does **not** reply. It sends you an alert instead.
 - **Spam and scams** are ignored.
 - **YouTube** comments are checked every 5 minutes (optional).
 

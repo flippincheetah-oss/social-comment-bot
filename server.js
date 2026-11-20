@@ -71,6 +71,8 @@ async function keywordFlow(platform, id, from, kw, send_public, send_private) {
     log({ id, posted: true });
   } catch (e) {
     log({ id, error: String(e) });
+    console.error(`SEND FAILED (${platform} ${kw.name} from ${from}): ${String(e).slice(0, 500)}`);
+    await notify(`Keyword reply FAILED: ${platform} ${kw.name}`, `From: ${from}\n\nError: ${String(e).slice(0, 400)}`).catch(() => {});
   }
 }
 
@@ -147,6 +149,11 @@ app.post("/webhook", (req, res) => {
   const body = req.body;
   log({ kind: "raw-webhook", body: JSON.stringify(body).slice(0, 1500) });
   console.log("webhook received:", body.object, (body.entry || []).length, "entries");
+  for (const e of body.entry || []) for (const c of e.changes || []) {
+    const v = c.value || {};
+    const txt = String(v.message?.text ?? v.message ?? v.text ?? "");
+    console.log(`event ${body.object}/${c.field}: from=${v.from?.name || v.from?.username || v.sender?.id || "?"} text=${JSON.stringify(txt.slice(0, 80))} keyword=${matchKeyword(txt)?.name ?? "none"}`);
+  }
   const selfIds = new Set([process.env.META_IG_USER_ID]);
 
   for (const entry of body.entry || []) {
@@ -173,10 +180,9 @@ app.post("/webhook", (req, res) => {
             recipient: { comment_id: v.id }, message: { text: t },
           })
         );
-      } else if (ch.field === "comments" && v.id && !selfIds.has(v.from?.id)) {
-        handle("instagram", "comment", v.id, v.from?.username, v.text, (t) =>
-          graphPost(`/${v.id}/replies`, { message: t })
-        );
+      } else if (ch.field === "comments" && v.id) {
+        // Comments that are not a keyword are never answered.
+        log({ platform: "instagram", kind: "comment-ignored", id: v.id, from: v.from?.username, message: v.text });
       }
       if (ch.field === "feed" && v.item === "comment" && v.verb === "add" && v.comment_id) {
         if (v.from?.id === entry.id) continue; // our own page's comment
@@ -191,9 +197,7 @@ app.post("/webhook", (req, res) => {
           );
           continue;
         }
-        handle("facebook", "comment", v.comment_id, v.from?.name, v.message, (t) =>
-          graphPost(`/${v.comment_id}/comments`, { message: t })
-        );
+        log({ platform: "facebook", kind: "comment-ignored", id: v.comment_id, from: v.from?.name, message: v.message });
       }
     }
     // DMs (Messenger + Instagram messaging)
@@ -215,5 +219,58 @@ app.get("/", (_req, res) => res.send(`social-comment-bot up. dry-run: ${DRY_RUN}
 app.listen(process.env.PORT || 3000, () =>
   console.log(`listening, DRY_RUN=${DRY_RUN}`)
 );
+
+// ---- Safety net: Meta sometimes never sends the webhook for a comment. Every minute, look at the
+// newest comments on recent posts + reels and answer any keyword comment we have not handled. ----
+async function graphGet(path) {
+  const sep = path.includes("?") ? "&" : "?";
+  const r = await fetch(`${GRAPH}${path}${sep}access_token=${process.env.META_PAGE_TOKEN}`);
+  if (!r.ok) throw new Error(`Graph GET ${r.status}: ${(await r.text()).slice(0, 300)}`);
+  return r.json();
+}
+const POLL_WINDOW_MS = 45 * 60 * 1000;
+let pollPageId = null;
+let pollErrorAlerted = false;
+async function pollFacebookComments() {
+  try {
+    if (!pollPageId) pollPageId = (await graphGet("/me?fields=id")).id;
+    const [posts, reels] = await Promise.all([
+      graphGet("/me/posts?fields=id&limit=10").catch(() => ({ data: [] })),
+      graphGet("/me/video_reels?fields=id&limit=10").catch(() => ({ data: [] })),
+    ]);
+    const ids = [...new Set([...(posts.data || []), ...(reels.data || [])].map((p) => p.id))];
+    let found = 0;
+    for (const pid of ids) {
+      const c = await graphGet(
+        `/${pid}/comments?fields=id,message,created_time,from,comments.limit(10){from}&order=reverse_chronological&limit=15`
+      ).catch(() => ({ data: [] }));
+      for (const cm of c.data || []) {
+        if (Date.now() - new Date(cm.created_time).getTime() > POLL_WINDOW_MS) continue;
+        if (cm.from?.id === pollPageId) continue;
+        if ((cm.comments?.data || []).some((r) => r.from?.id === pollPageId)) continue; // already answered
+        const kw = matchKeyword(cm.message);
+        if (!kw || seen.has(cm.id)) continue;
+        found++;
+        console.log(`poller caught missed comment: from=${cm.from?.name || "?"} keyword=${kw.name}`);
+        await keywordFlow(
+          "facebook", cm.id, cm.from?.name, kw,
+          (t) => graphPost(`/${cm.id}/comments`, { message: t }),
+          (t) => graphPost(`/me/messages`, { recipient: { comment_id: cm.id }, message: { text: t } })
+        );
+      }
+    }
+    pollErrorAlerted = false;
+  } catch (e) {
+    console.error("poller error:", String(e).slice(0, 300));
+    if (!pollErrorAlerted) {
+      pollErrorAlerted = true;
+      await notify("Comment safety-net poller error", String(e).slice(0, 400)).catch(() => {});
+    }
+  }
+}
+if (process.env.META_PAGE_TOKEN && process.env.POLL_COMMENTS !== "false") {
+  setInterval(pollFacebookComments, 60 * 1000);
+  setTimeout(pollFacebookComments, 15 * 1000);
+}
 
 if (process.env.YT_REFRESH_TOKEN) startYouTube(handle);
