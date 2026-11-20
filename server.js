@@ -6,7 +6,23 @@ import { matchKeyword, PUBLIC_REPLIES } from "./keywords.js";
 
 const app = express();
 const GRAPH = "https://graph.facebook.com/v21.0";
-const seen = new Set(); // basic dedupe; webhooks can repeat
+// Basic dedupe; webhooks can repeat. Capped so memory cannot grow forever.
+const seen = {
+  ids: new Set(),
+  has(id) { return this.ids.has(id); },
+  add(id) {
+    this.ids.add(id);
+    if (this.ids.size > 5000) this.ids.delete(this.ids.values().next().value); // drop oldest
+  },
+};
+
+// Refuse to start without the secrets that protect the webhook.
+for (const k of ["META_VERIFY_TOKEN", "META_APP_SECRET"]) {
+  if (!process.env[k]) {
+    console.error(`Missing ${k} in .env. Set it before starting the server.`);
+    process.exit(1);
+  }
+}
 
 // keep raw body so we can verify Meta's signature
 app.use(express.json({ verify: (req, _res, buf) => (req.raw = buf) }));
@@ -15,6 +31,7 @@ app.use(express.json({ verify: (req, _res, buf) => (req.raw = buf) }));
 app.get("/webhook", (req, res) => {
   if (
     req.query["hub.mode"] === "subscribe" &&
+    process.env.META_VERIFY_TOKEN &&
     req.query["hub.verify_token"] === process.env.META_VERIFY_TOKEN
   )
     return res.send(req.query["hub.challenge"]);
