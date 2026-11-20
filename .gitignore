@@ -1,0 +1,8 @@
+.env
+.env.*
+!.env.example
+*.log
+node_modules/
+.DS_Store
+# your own private business facts (copy facts.example.md to facts.md)
+facts.md

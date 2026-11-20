@@ -1,0 +1,89 @@
+{
+  "_help": "Edit this file to change the keyword DMs and prices. No code changes needed. Restart the server after editing. Placeholders like {{phone}} are filled in from the 'company' section.",
+
+  "company": {
+    "name": "Sunshine Tours",
+    "phone": "555-0100",
+    "email": "hello@example.com",
+    "website": "https://www.example.com",
+    "bookingUrl": "https://book.example.com"
+  },
+
+  "publicReplies": [
+    "Sent you a DM! 🌴",
+    "Just DM'd you the details! 🌴",
+    "Check your DMs! 🌴",
+    "Sending you the info now 🌴"
+  ],
+
+  "keywords": [
+    {
+      "name": "TOUR",
+      "triggers": ["tour"],
+      "dm": [
+        "Hey! Here's our Sunshine City Highlights Tour 🌴",
+        "",
+        "👶 FREE child seats! We provide them at no extra cost.",
+        "⏰ Plenty of time at every stop",
+        "😌 A relaxed day, about 7-8 hours",
+        "🚐 Pickup from hotels in the downtown and harbor areas",
+        "",
+        "📍 Stops: Hilltop Observatory, Palm Pier, Old Town Market, Sunset Beach",
+        "",
+        "Prices per person: $75 adult (17+), $55 child (3-16), infants (0-2) free.",
+        "",
+        "Book here: {{bookingUrl}}",
+        "",
+        "Want the theme park shuttle or private tour options too? Just reply here 😊"
+      ]
+    },
+    {
+      "name": "SHUTTLE",
+      "triggers": ["shuttle"],
+      "dm": [
+        "Hey! Here's our Theme Park Shuttle 🎢",
+        "",
+        "👶 FREE child seats! Just tell us when you book.",
+        "🚐 Round trip from downtown and harbor area hotels",
+        "⏰ Pickup about 8:00-8:15 AM, return pickup about 6:00-7:00 PM",
+        "🎟️ Transportation only: park tickets are not included",
+        "",
+        "Price for your whole group, round trip:",
+        "• 1-4 guests: $200",
+        "• 5-6 guests: $250",
+        "• 7-8 guests: $350",
+        "• 9-11 guests: $450",
+        "",
+        "Not sure your hotel is on our pickup list? Call {{phone}} and we'll check. Free cancellation up to 48 hours before.",
+        "",
+        "Book here: {{bookingUrl}}/shuttle",
+        "",
+        "Want the city tour or private tour options too? Just reply here 😊"
+      ]
+    },
+    {
+      "name": "PRIVATE",
+      "triggers": ["private"],
+      "dm": [
+        "Hey! Here's our Private Custom Tour 🚐",
+        "",
+        "👶 FREE child seats included!",
+        "🗺️ You choose the stops, we handle everything else",
+        "⏰ You choose your own start time, 6 hours",
+        "📍 Pickup from any address in the service area (you type your address when you book)",
+        "",
+        "Price for your whole group:",
+        "• 1-4 guests: $400",
+        "• 5-8 guests: $550",
+        "• 9-12 guests: $700",
+        "Infants are free.",
+        "",
+        "Book at least 2 days ahead: {{bookingUrl}}/private",
+        "",
+        "Larger group? Email {{email}} or call {{phone}}. Free cancellation up to 48 hours before.",
+        "",
+        "Want the city tour or shuttle options too? Just reply here 😊"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "name": "social-comment-bot",
+  "version": "0.1.0",
+  "description": "Auto-reply bot for Instagram, Facebook and YouTube comments and DMs, powered by Claude. Dry-run by default.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "start": "node --env-file-if-exists=.env server.js",
+    "test": "node --env-file-if-exists=.env test.js",
+    "tokens": "node --env-file=.env setup-tokens.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.60.0",
+    "express": "^4.21.0"
+  }
+}
